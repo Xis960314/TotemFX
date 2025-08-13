@@ -1,0 +1,43 @@
+name: Build jar
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Bootstrap Gradle to generate wrapper (if not present)
+      - name: Install Gradle 8.7 (bootstrap)
+        run: |
+          curl -L -o gradle.zip https://services.gradle.org/distributions/gradle-8.7-bin.zip
+          unzip -q gradle.zip
+          echo "$PWD/gradle-8.7/bin" >> $GITHUB_PATH
+
+      - name: Generate Gradle Wrapper
+        run: |
+          gradle wrapper --gradle-version 8.7 --no-daemon
+
+      - name: Build with wrapper
+        run: |
+          chmod +x ./gradlew || true
+          ./gradlew build --no-daemon
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: totemfx-jar
+          path: build/libs/*.jar
+          if-no-files-found: error
